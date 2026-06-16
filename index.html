@@ -116,6 +116,20 @@
   ::-webkit-scrollbar{width:5px}
   ::-webkit-scrollbar-track{background:var(--bg)}
   ::-webkit-scrollbar-thumb{background:var(--borda);border-radius:3px}
+
+  /* ── LOGIN ─────────────────────────────────────────── */
+  .login-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+  .login-box{background:var(--painel);border:1px solid var(--borda);border-radius:14px;padding:36px 32px;width:100%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.5);text-align:center}
+  .login-logo{font-size:36px;margin-bottom:8px}
+  .login-title{font-size:18px;font-weight:700;color:var(--texto);margin-bottom:4px}
+  .login-sub{font-size:12px;color:var(--mudo);margin-bottom:24px}
+  .login-input{width:100%;padding:12px 14px;background:var(--card);border:1px solid var(--borda);border-radius:8px;color:var(--texto);font-size:20px;text-align:center;letter-spacing:6px;outline:none;box-sizing:border-box;transition:border .2s}
+  .login-input:focus{border-color:var(--verde)}
+  .login-input.erro{border-color:var(--vermelho);animation:shake .3s}
+  .login-btn{width:100%;margin-top:14px;padding:12px;background:var(--verde);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s}
+  .login-btn:hover{opacity:.85}
+  .login-erro{font-size:12px;color:var(--vermelho);margin-top:10px;min-height:16px}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 </style>
 <!-- Firebase -->
 <script type="module">
@@ -177,6 +191,17 @@
 </script>
 </head>
 <body>
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">💰</div>
+    <div class="login-title">Finanças Pessoais</div>
+    <div class="login-sub">Digite sua senha para continuar</div>
+    <input class="login-input" type="password" id="login-input" maxlength="20" placeholder="••••••" onkeydown="if(event.key==='Enter') loginTentar()">
+    <button class="login-btn" onclick="loginTentar()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
 
 <nav class="sidebar">
   <div class="sidebar-logo">💰 Finanças Pessoais</div>
@@ -665,6 +690,32 @@ buildResCats();
     toast('Dados locais migrados para a nuvem! ☁', false);
   }catch(e){ console.warn('Migração falhou:', e); }
 })();
+
+// ── LOGIN ────────────────────────────────────────────────
+const SENHA_HASH = '6f93fca5895088d269d0ce1b45b3d747f0366cb8b6d957eb2cc64a5ac6812ce7';
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function loginTentar(){
+  const val = document.getElementById('login-input').value;
+  const hash = await sha256(val);
+  if(hash === SENHA_HASH){
+    document.getElementById('login-overlay').style.display='none';
+    sessionStorage.setItem('fin_auth','1');
+  }else{
+    const inp = document.getElementById('login-input');
+    inp.classList.add('erro');
+    document.getElementById('login-erro').textContent='Senha incorreta. Tente novamente.';
+    inp.value='';
+    setTimeout(()=>inp.classList.remove('erro'),400);
+  }
+}
+// Verifica se já autenticou nesta sessão
+if(sessionStorage.getItem('fin_auth')==='1'){
+  document.getElementById('login-overlay').style.display='none';
+}
+
 </script>
 </body>
 </html>
