@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle Financeiro</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#1a1a2e;--painel:#16213e;--card:#0f3460;
+    --verde:#1D9E75;--vermelho:#D85A30;
+    --texto:#e0e0e0;--mudo:#7a8a9a;--borda:#2a2a4a;--input:#0d1f35;
+  }
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--texto);display:flex;height:100vh;overflow:hidden}
+  
+  /* SIDEBAR */
+  .sidebar{width:190px;flex-shrink:0;background:var(--painel);display:flex;flex-direction:column;border-right:1px solid var(--borda)}
+  .sidebar-logo{padding:18px 16px 10px;font-size:13px;font-weight:700;color:var(--verde);border-bottom:1px solid var(--borda);margin-bottom:8px}
+  .nav-section{font-size:10px;color:var(--mudo);padding:10px 16px 4px;text-transform:uppercase;letter-spacing:.08em}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;color:var(--mudo);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+  .nav-item:hover{background:var(--card);color:var(--texto)}
+  .nav-item.active{background:var(--card);color:var(--verde);border-left-color:var(--verde);font-weight:600}
+  .nav-item.active.red{color:var(--vermelho);border-left-color:var(--vermelho)}
+  .nav-divider{height:1px;background:var(--borda);margin:8px 12px}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .page{display:none;flex-direction:column;height:100%;overflow:hidden}
+  .page.active{display:flex}
+  .page-title{font-size:17px;font-weight:600;padding:18px 24px 12px;flex-shrink:0}
+
+  /* FORM */
+  .form-card{background:var(--painel);margin:0 24px;border-radius:8px;padding:20px;flex-shrink:0}
+  .form-row{display:flex;gap:20px;margin-bottom:14px}
+  .form-group{display:flex;flex-direction:column;gap:5px;flex:1}
+  .form-group.fixed{flex:0 0 auto}
+  label{font-size:11px;color:var(--mudo);font-weight:500}
+  input[type=text],input[type=number],input[type=date]{
+    background:var(--input);color:var(--texto);border:1px solid var(--borda);
+    border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;
+    width:100%;outline:none;transition:border .15s;
+    color-scheme:dark;
+  }
+  input[type=date]{cursor:pointer}
+  input:focus{border-color:var(--verde)}
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
+
+  /* TOGGLE BUTTONS */
+  .toggle-group{display:flex;flex-wrap:wrap;gap:6px}
+  .tog{padding:6px 12px;border-radius:6px;border:1px solid var(--borda);background:var(--input);color:var(--mudo);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+  .tog:hover{border-color:var(--verde);color:var(--texto)}
+  .tog.sel-red{background:#3a1a0e;border-color:var(--vermelho);color:var(--vermelho);font-weight:600}
+  .tog.sel-green{background:#0a2e22;border-color:var(--verde);color:var(--verde);font-weight:600}
+
+  /* CREDITO EXTRA */
+  .credito-extra{display:none;background:var(--card);border-radius:6px;padding:14px;margin-top:10px}
+  .credito-extra.visible{display:block}
+
+  /* BTN */
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:6px}
+  .btn-green{background:var(--verde);color:#fff}
+  .btn-green:hover{background:#167a5a}
+  .btn-red{background:var(--vermelho);color:#fff}
+  .btn-red:hover{background:#a83d18}
+
+  /* FILTER BAR */
+  .filter-bar{background:var(--card);margin:0 24px 10px;border-radius:8px;padding:14px 16px;flex-shrink:0}
+  .filter-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .filter-group{display:flex;flex-direction:column;gap:4px}
+  .filter-group label{font-size:11px;color:var(--mudo)}
+  .filter-group input{width:140px}
+  .cat-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .cat-check{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mudo);cursor:pointer;padding:4px 8px;border-radius:5px;border:1px solid var(--borda);background:var(--input);transition:all .15s}
+  .cat-check:hover{border-color:var(--verde)}
+  .cat-check input{display:none}
+  .cat-check.checked{background:#0a2e22;border-color:var(--verde);color:var(--verde)}
+
+  /* METRICS */
+  .metrics{display:flex;gap:10px;margin:0 24px 10px;flex-shrink:0}
+  .metric{background:var(--card);border-radius:8px;padding:12px 16px;flex:1}
+  .metric-label{font-size:11px;color:var(--mudo);margin-bottom:5px}
+  .metric-value{font-size:20px;font-weight:700}
+
+  /* PROGRESS BAR */
+  .progress-wrap{margin:0 24px 8px;height:6px;background:var(--card);border-radius:3px;overflow:hidden;flex-shrink:0}
+  .progress-fill{height:100%;border-radius:3px;transition:width .4s}
+
+  /* LIST */
+  .list-wrap{flex:1;overflow-y:auto;padding:0 24px 16px}
+  .list-section-title{font-size:12px;font-weight:700;color:var(--mudo);padding:10px 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  .list-item{display:flex;align-items:center;background:var(--painel);border-radius:6px;padding:9px 12px;margin-bottom:4px;gap:8px}
+  .li-date{font-size:11px;color:var(--mudo);width:72px;flex-shrink:0}
+  .li-desc{flex:1;font-size:13px}
+  .li-sub{font-size:10px;color:var(--mudo);margin-top:1px}
+  .li-cat{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--card);color:var(--mudo);flex-shrink:0}
+  .li-val{font-size:13px;font-weight:700;width:110px;text-align:right;flex-shrink:0}
+  .green{color:var(--verde)}
+  .red{color:var(--vermelho)}
+
+  /* DELETE BUTTON */
+  .btn-del{background:transparent;border:1px solid transparent;color:var(--mudo);font-size:14px;cursor:pointer;padding:4px 7px;border-radius:5px;line-height:1;transition:all .15s;flex-shrink:0}
+  .btn-del:hover{background:#3a1a0e;border-color:var(--vermelho);color:var(--vermelho)}
+
+  /* MODAL CONFIRMAÇÃO */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.show{opacity:1;pointer-events:all}
+  .modal-box{background:var(--painel);border:1px solid var(--borda);border-radius:10px;padding:24px 28px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  .modal-title{font-size:15px;font-weight:700;margin-bottom:8px;color:var(--texto)}
+  .modal-desc{font-size:13px;color:var(--mudo);margin-bottom:20px;line-height:1.5}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+  .toast.show{opacity:1}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--borda);border-radius:3px}
+</style>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDGTs3xt2_xmrsB-2nFtU5EwI6M5lL5dAU",
+    authDomain: "financeiro-7ba42.firebaseapp.com",
+    projectId: "financeiro-7ba42",
+    storageBucket: "financeiro-7ba42.firebasestorage.app",
+    messagingSenderId: "495833040342",
+    appId: "1:495833040342:web:fefc417a27b4c63fcfd077"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const col = collection(db, 'lancamentos');
+
+  // Expõe para o código global
+  window._db        = db;
+  window._col       = col;
+  window._fsDoc     = doc;
+  window._fsSetDoc  = setDoc;
+  window._fsDelDoc  = deleteDoc;
+
+  // Listener em tempo real — atualiza dados e re-renderiza
+  const q = query(col, orderBy('data', 'desc'));
+  onSnapshot(q, snap => {
+    window.dados = snap.docs.map(d => d.data());
+    setSyncStatus('ok');
+    // Re-renderiza a página visível
+    const pagAtiva = document.querySelector('.page.active')?.id?.replace('page-','');
+    if(pagAtiva==='resumo')    window.renderResumo && window.renderResumo();
+    if(pagAtiva==='credito')   window.renderCredito && window.renderCredito();
+    if(pagAtiva==='historico') window.renderHistorico && window.renderHistorico();
+  }, err => {
+    console.error(err);
+    setSyncStatus('erro');
+  });
+
+  function setSyncStatus(s){
+    const el = document.getElementById('sync-status');
+    if(!el) return;
+    if(s==='ok')       { el.textContent='☁ Sincronizado'; el.style.color='var(--verde)'; }
+    else if(s==='erro'){ el.textContent='⚠ Sem conexão';  el.style.color='var(--vermelho)'; }
+    else               { el.textContent='↻ Sincronizando…'; el.style.color='var(--mudo)'; }
+  }
+  window.setSyncStatus = setSyncStatus;
+  setSyncStatus('sync');
+</script>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">💰 Finanças Pessoais</div>
+  <div id="sync-status" style="font-size:10px;padding:4px 16px 10px;color:var(--mudo);border-bottom:1px solid var(--borda);margin-bottom:4px">↻ Conectando…</div>
+  <div class="nav-section">Lançamentos</div>
+  <div class="nav-item active" id="nav-entrada" onclick="goto('entrada')">▼ Entrada</div>
+  <div class="nav-item red" id="nav-saida" onclick="goto('saida')">▲ Saída</div>
+  <div class="nav-divider"></div>
+  <div class="nav-section">Resumos</div>
+  <div class="nav-item" id="nav-resumo" onclick="goto('resumo')">▦ Resumo</div>
+  <div class="nav-item" id="nav-credito" onclick="goto('credito')">▣ Crédito</div>
+  <div class="nav-item" id="nav-historico" onclick="goto('historico')">≡ Histórico</div>
+</nav>
+
+<div class="main">
+
+  <!-- ═══ ENTRADA ═══ -->
+  <div class="page active" id="page-entrada">
+    <div class="page-title green">▼ Lançar Entrada</div>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group fixed">
+          <label>Data do lançamento</label>
+          <input type="date" id="ent-data">
+        </div>
+        <div class="form-group">
+          <label>Descrição</label>
+          <input type="text" id="ent-desc" placeholder="Ex: Salário, Freelance...">
+        </div>
+        <div class="form-group fixed">
+          <label>Valor (R$)</label>
+          <input type="number" id="ent-val" placeholder="0,00" min="0" step="0.01" style="width:140px">
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="salvarEntrada()">▼ Lançar entrada</button>
+    </div>
+  </div>
+
+  <!-- ═══ SAÍDA ═══ -->
+  <div class="page" id="page-saida" style="overflow-y:auto">
+    <div class="page-title red">▲ Lançar Saída</div>
+    <div class="form-card" style="margin-bottom:12px">
+
+      <div class="form-row">
+        <div class="form-group fixed">
+          <label>Data do lançamento</label>
+          <input type="date" id="sai-data">
+        </div>
+        <div class="form-group">
+          <label>Descrição</label>
+          <input type="text" id="sai-desc" placeholder="Ex: Aluguel, Mercado...">
+        </div>
+        <div class="form-group fixed">
+          <label>Valor (R$)</label>
+          <input type="number" id="sai-val" placeholder="0,00" min="0" step="0.01" style="width:140px">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Categoria</label>
+        <div class="toggle-group" id="cat-group" style="margin-top:5px"></div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:10px">
+        <label>Forma de pagamento</label>
+        <div class="toggle-group" style="margin-top:5px">
+          <div class="tog sel-red" data-v="Dinheiro" onclick="selForma(this)">💵 Dinheiro</div>
+          <div class="tog" data-v="Pix" onclick="selForma(this)">📲 Pix</div>
+          <div class="tog" data-v="Crédito" onclick="selForma(this)">💳 Crédito</div>
+          <div class="tog" data-v="Débito" onclick="selForma(this)">🏧 Débito</div>
+        </div>
+      </div>
+
+      <div class="credito-extra" id="credito-extra">
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Tipo de pagamento</label>
+          <div class="toggle-group" style="margin-top:5px">
+            <div class="tog sel-red" data-v="avista" onclick="selTipo(this)">À vista</div>
+            <div class="tog" data-v="parcelado" onclick="selTipo(this)">Parcelado</div>
+          </div>
+        </div>
+        <div id="parcelas-wrap" style="display:none">
+          <div class="form-group">
+            <label>Número de parcelas</label>
+            <input type="number" id="sai-parcelas" placeholder="Ex: 3" min="2" step="1" style="width:120px;margin-top:5px">
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--borda);margin-top:14px;padding-top:14px">
+        <button class="btn btn-red" onclick="salvarSaida()">▲ Lançar saída</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RESUMO ═══ -->
+  <div class="page" id="page-resumo">
+    <div class="page-title">▦ Resumo Financeiro</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <div class="filter-group"><label>De</label><input type="date" id="res-de"></div>
+        <div class="filter-group"><label>Até</label><input type="date" id="res-ate"></div>
+        <div class="filter-group" style="flex:1;min-width:160px"><label>Buscar descrição</label><input type="text" id="res-busca" placeholder="Ex: Mercado, Salário..." oninput="renderResumo()" style="width:100%"></div>
+        <button class="btn btn-green" style="margin-top:0" onclick="renderResumo()">Filtrar</button>
+      </div>
+      <div style="font-size:11px;color:var(--mudo);margin-top:8px;margin-bottom:4px">Filtrar por categoria (marque uma ou mais, deixe vazio para ver tudo):</div>
+      <div class="cat-checks" id="res-cats"></div>
+    </div>
+    <div class="metrics" id="res-metrics"></div>
+    <div class="progress-wrap"><div class="progress-fill" id="res-bar"></div></div>
+    <div class="list-wrap" id="res-list"></div>
+  </div>
+
+  <!-- ═══ CRÉDITO ═══ -->
+  <div class="page" id="page-credito">
+    <div class="page-title red">▣ Fatura do Cartão</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <div class="filter-group"><label>De</label><input type="date" id="crd-de"></div>
+        <div class="filter-group"><label>Até</label><input type="date" id="crd-ate"></div>
+        <button class="btn btn-green" style="margin-top:0" onclick="renderCredito()">Filtrar</button>
+      </div>
+    </div>
+    <div class="metrics" id="crd-metrics"></div>
+    <div class="list-wrap" id="crd-list"></div>
+  </div>
+
+  <!-- ═══ HISTÓRICO ═══ -->
+  <div class="page" id="page-historico">
+    <div class="page-title">≡ Histórico de Lançamentos</div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <div class="filter-group"><label>De</label><input type="date" id="his-de"></div>
+        <div class="filter-group"><label>Até</label><input type="date" id="his-ate"></div>
+        <button class="btn btn-green" style="margin-top:0" onclick="renderHistorico()">Filtrar</button>
+      </div>
+    </div>
+    <div class="list-wrap" id="his-list"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL CONFIRMAÇÃO DELETE -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal-box">
+    <div class="modal-title">🗑️ Excluir lançamento?</div>
+    <div class="modal-desc" id="modal-del-desc">Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.</div>
+    <div class="modal-btns">
+      <button class="btn" style="background:var(--card);color:var(--mudo);margin-top:0" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-red" style="margin-top:0" onclick="confirmarDelete()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STORAGE (Firebase) ───────────────────────────────────
+// dados é preenchido pelo onSnapshot do módulo Firebase acima
+window.dados = window.dados || [];
+
+async function salvarItem(item){
+  window.setSyncStatus && window.setSyncStatus('sync');
+  try{
+    const ref = window._fsDoc(window._col, String(item.id));
+    await window._fsSetDoc(ref, item);
+  }catch(e){ console.error('Erro ao salvar:', e); window.setSyncStatus('erro'); }
+}
+async function deletarItem(id){
+  window.setSyncStatus && window.setSyncStatus('sync');
+  try{
+    const ref = window._fsDoc(window._col, String(id));
+    await window._fsDelDoc(ref);
+  }catch(e){ console.error('Erro ao deletar:', e); window.setSyncStatus('erro'); }
+}
+// Getter para dados sempre atualizado
+function getDados(){ return window.dados || []; }
+
+// ── CONSTANTES ───────────────────────────────────────────
+const CATEGORIAS = ['Alimentação','Petz','Habitação','Transporte','Vestuário','Lazer','Educação','Saúde e bem-estar','Coisas pra casa','Outros'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ── ESTADO ───────────────────────────────────────────────
+let curForma = 'Dinheiro';
+let curTipo  = 'avista';
+
+// ── UTIS ─────────────────────────────────────────────────
+function today(){ return new Date().toISOString().slice(0,10) }
+function firstOfMonth(){ return today().slice(0,8)+'01' }
+function fmtDate(d){
+  if(!d) return '';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+function fmt(v){
+  return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function toast(msg, red){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = red ? 'var(--vermelho)' : 'var(--verde)';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+function filtrar(de, ate, cats, tipo){
+  return getDados().filter(i=>{
+    if(tipo && i.tipo !== tipo) return false;
+    if(de  && i.data < de)  return false;
+    if(ate && i.data > ate) return false;
+    if(cats && cats.length && !cats.includes(i.categoria)) return false;
+    return true;
+  });
+}
+
+// ── NAV ──────────────────────────────────────────────────
+function goto(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='resumo')   renderResumo();
+  if(id==='credito')  renderCredito();
+  if(id==='historico')renderHistorico();
+}
+
+// ── CATEGORIAS (botões na saída) ─────────────────────────
+function buildCatGroup(){
+  const g = document.getElementById('cat-group');
+  CATEGORIAS.forEach(cat=>{
+    const d = document.createElement('div');
+    d.className = 'tog' + (cat==='Outros'?' sel-red':'');
+    d.dataset.v = cat;
+    d.textContent = cat;
+    d.onclick = ()=>selCat(d);
+    g.appendChild(d);
+  });
+}
+let curCat = 'Outros';
+function selCat(el){
+  document.querySelectorAll('#cat-group .tog').forEach(t=>t.classList.remove('sel-red'));
+  el.classList.add('sel-red');
+  curCat = el.dataset.v;
+}
+
+// ── FORMA / TIPO ─────────────────────────────────────────
+function selForma(el){
+  document.querySelectorAll('.tog[data-v="Dinheiro"],  .tog[data-v="Pix"], .tog[data-v="Crédito"], .tog[data-v="Débito"]')
+    .forEach(t=>t.classList.remove('sel-red'));
+  el.classList.add('sel-red');
+  curForma = el.dataset.v;
+  document.getElementById('credito-extra').classList.toggle('visible', curForma==='Crédito');
+}
+function selTipo(el){
+  document.querySelectorAll('#credito-extra .tog').forEach(t=>t.classList.remove('sel-red'));
+  el.classList.add('sel-red');
+  curTipo = el.dataset.v;
+  document.getElementById('parcelas-wrap').style.display = curTipo==='parcelado' ? 'block' : 'none';
+}
+
+// ── SALVAR ENTRADA ───────────────────────────────────────
+function salvarEntrada(){
+  const data = document.getElementById('ent-data').value;
+  const desc = document.getElementById('ent-desc').value.trim() || 'Sem descrição';
+  const val  = parseFloat(document.getElementById('ent-val').value);
+  if(!data){ toast('Selecione uma data.', true); return; }
+  if(!val||val<=0){ toast('Informe um valor válido.', true); return; }
+  const item={id:Date.now(),tipo:'entrada',data,descricao:desc,valor:val,forma:null,categoria:null,credito:null};
+  salvarItem(item);
+  document.getElementById('ent-desc').value='';
+  document.getElementById('ent-val').value='';
+  toast(`Entrada de ${fmt(val)} lançada em ${fmtDate(data)}!`);
+}
+
+// ── SALVAR SAÍDA ─────────────────────────────────────────
+function salvarSaida(){
+  const data = document.getElementById('sai-data').value;
+  const desc = document.getElementById('sai-desc').value.trim() || 'Sem descrição';
+  const val  = parseFloat(document.getElementById('sai-val').value);
+  if(!data){ toast('Selecione uma data.', true); return; }
+  if(!val||val<=0){ toast('Informe um valor válido.', true); return; }
+
+  if(curForma==='Crédito'){
+    if(curTipo==='avista'){
+      salvarItem({id:Date.now(),tipo:'saida',data,descricao:desc,valor:val,forma:'Crédito à vista',categoria:curCat,credito:{tipo:'À vista',parcelas:1,parcela_atual:1}});
+      toast(`Crédito à vista de ${fmt(val)} lançado!`, true);
+    } else {
+      const parc = parseInt(document.getElementById('sai-parcelas').value);
+      if(!parc||parc<2){ toast('Informe as parcelas (mínimo 2).', true); return; }
+      const vp = Math.round(val/parc*100)/100;
+      const base = new Date(data+'T12:00:00');
+      for(let i=0;i<parc;i++){
+        const dt = new Date(base);
+        dt.setMonth(dt.getMonth()+i);
+        salvarItem({id:Date.now()+i,tipo:'saida',data:dt.toISOString().slice(0,10),
+                    descricao:`${desc} (${i+1}/${parc})`,valor:vp,
+                    forma:'Crédito parcelado',categoria:curCat,
+                    credito:{tipo:'Parcelado',parcelas:parc,parcela_atual:i+1,desc_original:desc}});
+      }
+      toast(`${parc}x de ${fmt(vp)} lançadas!`, true);
+    }
+  } else {
+    salvarItem({id:Date.now(),tipo:'saida',data,descricao:desc,valor:val,forma:curForma,categoria:curCat,credito:null});
+    toast(`Saída de ${fmt(val)} via ${curForma} lançada!`, true);
+  }
+  document.getElementById('sai-desc').value='';
+  document.getElementById('sai-val').value='';
+  document.getElementById('sai-parcelas').value='';
+}
+
+// ── RENDER RESUMO ─────────────────────────────────────────
+function buildResCats(){
+  const g = document.getElementById('res-cats');
+  g.innerHTML='';
+  CATEGORIAS.forEach(cat=>{
+    const el = document.createElement('label');
+    el.className='cat-check';
+    el.innerHTML=`<input type="checkbox" value="${cat}" onchange="this.parentElement.classList.toggle('checked',this.checked)">${cat}`;
+    g.appendChild(el);
+  });
+}
+function getSelCats(containerId){
+  return [...document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`)].map(c=>c.value);
+}
+function renderResumo(){
+  const de   = document.getElementById('res-de').value;
+  const ate  = document.getElementById('res-ate').value;
+  const cats = getSelCats('res-cats');
+  const busca = (document.getElementById('res-busca')?.value||'').toLowerCase().trim();
+  const filtraBusca = arr => busca ? arr.filter(i=>i.descricao.toLowerCase().includes(busca)) : arr;
+  const ents = filtraBusca(filtrar(de,ate,null,'entrada'));
+  const sais = filtraBusca(filtrar(de,ate,cats.length?cats:null,'saida'));
+  const te=ents.reduce((a,i)=>a+i.valor,0);
+  const ts=sais.reduce((a,i)=>a+i.valor,0);
+  const bal=te-ts;
+  const pct=te>0?Math.min(100,ts/te*100):(ts>0?100:0);
+
+  document.getElementById('res-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Entradas</div><div class="metric-value green">${fmt(te)}</div></div>
+    <div class="metric"><div class="metric-label">Saídas</div><div class="metric-value red">${fmt(ts)}</div></div>
+    <div class="metric"><div class="metric-label">Balanço</div><div class="metric-value ${bal>=0?'green':'red'}">${fmt(bal)}</div></div>`;
+  const bar=document.getElementById('res-bar');
+  bar.style.width=pct.toFixed(1)+'%';
+  bar.style.background=bal<0?'var(--vermelho)':'var(--verde)';
+
+  const list=document.getElementById('res-list');
+  if(cats.length){
+    // Agrupado por categoria
+    let html='';
+    cats.forEach(cat=>{
+      const its=sais.filter(i=>i.categoria===cat);
+      if(!its.length) return;
+      const tot=its.reduce((a,i)=>a+i.valor,0);
+      html+=`<div class="list-section-title">${cat} — ${fmt(tot)}</div>`;
+      its.sort((a,b)=>b.data.localeCompare(a.data)).forEach(i=>{
+        html+=itemHtml(i,'red',true);
+      });
+    });
+    list.innerHTML=html||'<div style="color:var(--mudo);padding:20px">Nenhum resultado.</div>';
+  } else {
+    let html='<div class="list-section-title">▼ Entradas</div>';
+    if(ents.length) ents.sort((a,b)=>b.data.localeCompare(a.data)).forEach(i=>html+=itemHtml(i,'green',false));
+    else html+='<div style="color:var(--mudo);font-size:13px;padding:4px 0">Nenhuma entrada</div>';
+    html+='<div class="list-section-title" style="margin-top:12px">▲ Saídas</div>';
+    if(sais.length) sais.sort((a,b)=>b.data.localeCompare(a.data)).forEach(i=>html+=itemHtml(i,'red',true));
+    else html+='<div style="color:var(--mudo);font-size:13px;padding:4px 0">Nenhuma saída</div>';
+    list.innerHTML=html;
+  }
+}
+
+// ── RENDER CRÉDITO ────────────────────────────────────────
+function renderCredito(){
+  const de  = document.getElementById('crd-de').value;
+  const ate = document.getElementById('crd-ate').value;
+  const its = filtrar(de,ate,null,null).filter(i=>i.credito);
+  const av  = its.filter(i=>i.credito.tipo==='À vista');
+  const pa  = its.filter(i=>i.credito.tipo==='Parcelado');
+  const tot = its.reduce((a,i)=>a+i.valor,0);
+  document.getElementById('crd-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">À vista</div><div class="metric-value red">${fmt(av.reduce((a,i)=>a+i.valor,0))}</div></div>
+    <div class="metric"><div class="metric-label">Parcelado</div><div class="metric-value red">${fmt(pa.reduce((a,i)=>a+i.valor,0))}</div></div>
+    <div class="metric"><div class="metric-label">Total fatura</div><div class="metric-value red">${fmt(tot)}</div></div>`;
+  let html='';
+  if(av.length){
+    html+='<div class="list-section-title">À vista</div>';
+    av.forEach(i=>html+=itemHtml(i,'red',true));
+  }
+  if(pa.length){
+    html+='<div class="list-section-title" style="margin-top:10px">Parcelado</div>';
+    pa.sort((a,b)=>a.data.localeCompare(b.data)).forEach(i=>html+=itemHtml(i,'red',true));
+  }
+  if(!its.length) html='<div style="color:var(--mudo);padding:20px">Nenhum gasto no crédito no período.</div>';
+  document.getElementById('crd-list').innerHTML=html;
+}
+
+// ── RENDER HISTÓRICO ──────────────────────────────────────
+function renderHistorico(){
+  const de  = document.getElementById('his-de').value;
+  const ate = document.getElementById('his-ate').value;
+  const its = filtrar(de,ate,null,null).sort((a,b)=>b.data.localeCompare(a.data));
+  if(!its.length){
+    document.getElementById('his-list').innerHTML='<div style="color:var(--mudo);padding:20px">Nenhum lançamento no período.</div>';
+    return;
+  }
+  let html='', curData='';
+  its.forEach(i=>{
+    if(i.data!==curData){
+      curData=i.data;
+      html+=`<div class="list-section-title">${fmtDate(curData)}</div>`;
+    }
+    html+=itemHtml(i,i.tipo==='entrada'?'green':'red',true);
+  });
+  document.getElementById('his-list').innerHTML=html;
+}
+
+// ── ITEM HTML ─────────────────────────────────────────────
+function itemHtml(i, cor, showCat){
+  const sinal = cor==='green' ? '+' : '−';
+  const sub = [i.forma, showCat&&i.categoria ? i.categoria : ''].filter(Boolean).join(' · ');
+  const badge = i.credito&&i.credito.tipo==='Parcelado'
+    ? `<span style="font-size:10px;color:var(--vermelho);margin-left:4px">(${i.credito.parcela_atual}/${i.credito.parcelas})</span>`:'';
+  return `<div class="list-item">
+    <div class="li-date">${fmtDate(i.data)}</div>
+    <div style="flex:1">
+      <div class="li-desc">${i.descricao}${badge}</div>
+      ${sub?`<div class="li-sub">${sub}</div>`:''}
+    </div>
+    ${showCat&&i.categoria?`<div class="li-cat">${i.categoria}</div>`:''}
+    <div class="li-val ${cor}">${sinal} ${fmt(i.valor)}</div>
+    <button class="btn-del" title="Excluir lançamento" onclick="abrirModalDelete(${i.id})">🗑</button>
+  </div>`;
+}
+
+// ── DELETE ────────────────────────────────────────────────
+let _delId = null;
+function abrirModalDelete(id){
+  _delId = id;
+  const item = dados.find(i=>i.id===id);
+  if(!item) return;
+  const sinal = item.tipo==='entrada' ? '+' : '−';
+  document.getElementById('modal-del-desc').innerHTML=
+    `Deseja excluir o lançamento abaixo?<br><br>
+     <strong>${item.descricao}</strong><br>
+     <span style="color:var(--mudo);font-size:12px">${fmtDate(item.data)} &nbsp;·&nbsp; ${sinal} ${fmt(item.valor)}</span>`;
+  document.getElementById('modal-del').classList.add('show');
+}
+function fecharModal(){
+  _delId = null;
+  document.getElementById('modal-del').classList.remove('show');
+}
+async function confirmarDelete(){
+  if(_delId===null) return;
+  fecharModal();
+  await deletarItem(_delId);
+  toast('Lançamento excluído.', true);
+}
+// Fechar modal clicando fora
+document.getElementById('modal-del').addEventListener('click', function(e){
+  if(e.target===this) fecharModal();
+});
+
+// ── INIT ─────────────────────────────────────────────────
+document.getElementById('ent-data').value = today();
+document.getElementById('sai-data').value = today();
+document.getElementById('res-de').value   = firstOfMonth();
+document.getElementById('res-ate').value  = today();
+document.getElementById('crd-de').value   = firstOfMonth();
+document.getElementById('crd-ate').value  = today();
+document.getElementById('his-de').value   = firstOfMonth();
+document.getElementById('his-ate').value  = today();
+buildCatGroup();
+buildResCats();
+// Migra dados do localStorage para o Firebase (execução única)
+(async function migrarLocalStorage(){
+  const KEY = 'fin_dados_v3';
+  const raw = localStorage.getItem(KEY);
+  if(!raw) return;
+  try{
+    const arr = JSON.parse(raw);
+    if(!arr.length) return;
+    if(!window._fsSetDoc || !window._col || !window._fsDoc){ setTimeout(migrarLocalStorage,1000); return; }
+    for(let i=0;i<arr.length;i++){
+      const item = arr[i];
+      if(!item.id) item.id = Date.now()+i;
+      const ref = window._fsDoc(window._col, String(item.id));
+      await window._fsSetDoc(ref, item);
+    }
+    localStorage.removeItem(KEY);
+    toast('Dados locais migrados para a nuvem! ☁', false);
+  }catch(e){ console.warn('Migração falhou:', e); }
+})();
+</script>
+</body>
+</html>
