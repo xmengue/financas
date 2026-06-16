@@ -135,28 +135,6 @@
   const db  = getFirestore(app);
   const col = collection(db, 'lancamentos');
 
-  // Expõe para o código global
-  window._db        = db;
-  window._col       = col;
-  window._fsDoc     = doc;
-  window._fsSetDoc  = setDoc;
-  window._fsDelDoc  = deleteDoc;
-
-  // Listener em tempo real — atualiza dados e re-renderiza
-  const q = query(col, orderBy('data', 'desc'));
-  onSnapshot(q, snap => {
-    window.dados = snap.docs.map(d => d.data());
-    setSyncStatus('ok');
-    // Re-renderiza a página visível
-    const pagAtiva = document.querySelector('.page.active')?.id?.replace('page-','');
-    if(pagAtiva==='resumo')    window.renderResumo && window.renderResumo();
-    if(pagAtiva==='credito')   window.renderCredito && window.renderCredito();
-    if(pagAtiva==='historico') window.renderHistorico && window.renderHistorico();
-  }, err => {
-    console.error(err);
-    setSyncStatus('erro');
-  });
-
   function setSyncStatus(s){
     const el = document.getElementById('sync-status');
     if(!el) return;
@@ -164,8 +142,38 @@
     else if(s==='erro'){ el.textContent='⚠ Sem conexão';  el.style.color='var(--vermelho)'; }
     else               { el.textContent='↻ Sincronizando…'; el.style.color='var(--mudo)'; }
   }
-  window.setSyncStatus = setSyncStatus;
   setSyncStatus('sync');
+
+  // Expõe funções diretamente como closures — garantidamente disponíveis
+  window.fbSalvar = async (item) => {
+    setSyncStatus('sync');
+    const docId = String(item.id);
+    item = {...item, id: docId}; // normaliza id para string no documento
+    const ref = doc(col, docId);
+    await setDoc(ref, item);
+  };
+  window.fbDeletar = async (id) => {
+    setSyncStatus('sync');
+    const docId = String(id);
+    console.log('[Firebase] Deletando documento:', docId);
+    const ref = doc(col, docId);
+    await deleteDoc(ref);
+    console.log('[Firebase] Deletado:', docId);
+  };
+
+  // Listener tempo real
+  const q = query(col, orderBy('data', 'desc'));
+  onSnapshot(q, snap => {
+    window.dados = snap.docs.map(d => d.data());
+    setSyncStatus('ok');
+    const pagAtiva = document.querySelector('.page.active')?.id?.replace('page-','');
+    if(pagAtiva==='resumo')    window.renderResumo && window.renderResumo();
+    if(pagAtiva==='credito')   window.renderCredito && window.renderCredito();
+    if(pagAtiva==='historico') window.renderHistorico && window.renderHistorico();
+  }, err => {
+    console.error('Firestore error:', err);
+    setSyncStatus('erro');
+  });
 </script>
 </head>
 <body>
@@ -331,18 +339,14 @@
 window.dados = window.dados || [];
 
 async function salvarItem(item){
-  window.setSyncStatus && window.setSyncStatus('sync');
   try{
-    const ref = window._fsDoc(window._col, String(item.id));
-    await window._fsSetDoc(ref, item);
-  }catch(e){ console.error('Erro ao salvar:', e); window.setSyncStatus('erro'); }
+    await window.fbSalvar(item);
+  }catch(e){ console.error('Erro ao salvar:', e); }
 }
 async function deletarItem(id){
-  window.setSyncStatus && window.setSyncStatus('sync');
   try{
-    const ref = window._fsDoc(window._col, String(id));
-    await window._fsDelDoc(ref);
-  }catch(e){ console.error('Erro ao deletar:', e); window.setSyncStatus('erro'); }
+    await window.fbDeletar(id);
+  }catch(e){ console.error('Erro ao deletar:', e); }
 }
 // Getter para dados sempre atualizado
 function getDados(){ return window.dados || []; }
@@ -604,8 +608,8 @@ function itemHtml(i, cor, showCat){
 // ── DELETE ────────────────────────────────────────────────
 let _delId = null;
 function abrirModalDelete(id){
-  _delId = id;
-  const item = dados.find(i=>i.id===id);
+  _delId = String(id);
+  const item = getDados().find(i=>String(i.id)===_delId);
   if(!item) return;
   const sinal = item.tipo==='entrada' ? '+' : '−';
   document.getElementById('modal-del-desc').innerHTML=
@@ -620,8 +624,10 @@ function fecharModal(){
 }
 async function confirmarDelete(){
   if(_delId===null) return;
+  const idParaDeletar = _delId;
   fecharModal();
-  await deletarItem(_delId);
+  console.log('Confirmando delete, id:', idParaDeletar);
+  await deletarItem(idParaDeletar);
   toast('Lançamento excluído.', true);
 }
 // Fechar modal clicando fora
